@@ -8,6 +8,10 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/main_scaffold.dart';
+import 'screens/items/item_list_screen.dart';
+import 'screens/stock/transaction_list_screen.dart';
+import 'screens/profile/profile_screen.dart';
+import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,32 +60,15 @@ final _router = GoRouter(
         ),
         GoRoute(
           path: '/items',
-          builder: (context, state) => Scaffold(
-            appBar: AppBar(title: const Text('Items')),
-            body: const Center(child: Text('Items CRUD pending...')),
-          ),
+          builder: (context, state) => const ItemListScreen(),
         ),
         GoRoute(
           path: '/transactions',
-          builder: (context, state) => Scaffold(
-            appBar: AppBar(title: const Text('Transactions')),
-            body: const Center(child: Text('Movements pending...')),
-          ),
+          builder: (context, state) => const TransactionListScreen(),
         ),
         GoRoute(
           path: '/profile',
-          builder: (context, state) => Scaffold(
-            appBar: AppBar(title: const Text('Profile')),
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Supabase.instance.client.auth.signOut();
-                  context.go('/login');
-                },
-                child: const Text('Logout'),
-              ),
-            ),
-          ),
+          builder: (context, state) => const ProfileScreen(),
         ),
       ],
     ),
@@ -93,6 +80,8 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Inventory Gudang',
@@ -105,6 +94,20 @@ class MyApp extends ConsumerWidget {
           scrolledUnderElevation: 0,
         ),
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          centerTitle: false,
+          scrolledUnderElevation: 0,
+        ),
+      ),
+      themeMode: themeMode,
       routerConfig: _router,
     );
   }

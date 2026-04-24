@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'items/add_edit_item_screen.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;
@@ -14,8 +15,24 @@ class MainScaffold extends StatelessWidget {
 
     return Scaffold(
       body: child,
+      floatingActionButton: location.startsWith('/items')
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddEditItemScreen(),
+                  ),
+                );
+              },
+              backgroundColor: const Color(0xFF2563EB),
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
+        selectedItemColor: const Color(0xFF2563EB),
+        unselectedItemColor: const Color(0xFF64748B),
         onTap: (index) {
           switch (index) {
             case 0:
@@ -40,7 +57,7 @@ class MainScaffold extends StatelessWidget {
           ),
           BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Items'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.sync_alt),
+            icon: Icon(Icons.swap_horiz),
             label: 'Transactions',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),

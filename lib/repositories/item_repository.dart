@@ -1,96 +1,136 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/item.dart';
-import '../models/stock_movement.dart';
 
 class ItemRepository {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final SupabaseClient _client = Supabase.instance.client;
 
-  // 1. Fetch Items with joined Inventory
-  Future<List<AppItem>> getItems() async {
-    final response = await _supabase
+  Future<List<Item>> getItems() async {
+    final response = await _client
         .from('items')
-        .select('*, inventory(quantity)')
+        .select()
         .order('created_at', ascending: false);
 
-    return (response as List).map((json) => AppItem.fromJson(json)).toList();
-  }
+    final itemRows = (response as List<dynamic>)
+        .map((json) => Map<String, dynamic>.from(json as Map))
+        .toList();
 
-  // 2. Add new item
-  Future<void> addItem({
-    required String name,
-    String? sku,
-    String? description,
-    File? imageFile,
-  }) async {
-    String? imageUrl;
-
-    if (imageFile != null) {
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${imageFile.path.split('/').last}';
-      await _supabase.storage.from('gambar-barang').upload(fileName, imageFile);
-      imageUrl = _supabase.storage.from('gambar-barang').getPublicUrl(fileName);
+    if (itemRows.isEmpty) {
+      return [];
     }
 
-    final response = await _supabase
+    final itemIds = itemRows
+        .map((item) => item['id'])
+        .whereType<String>()
+        .toList();
+    final quantityByItemId = await _loadInventoryQuantities(itemIds);
+
+    return itemRows.map((itemMap) {
+      itemMap['quantity'] = quantityByItemId[itemMap['id']] ?? 0;
+      return Item.fromJson(itemMap);
+    }).toList();
+  }
+
+  Future<Item> getItemById(String id) async {
+    final response = await _client.from('items').select().eq('id', id).single();
+    final itemMap = Map<String, dynamic>.from(response);
+
+    try {
+      final inventoryRow = await _client
+          .from('inventory')
+          .select('quantity')
+          .eq('item_id', id)
+          .maybeSingle();
+      itemMap['quantity'] = (inventoryRow?['quantity'] as num?)?.toInt() ?? 0;
+    } catch (_) {
+      itemMap['quantity'] = 0;
+    }
+
+    return Item.fromJson(itemMap);
+  }
+
+  Future<Item> createItem(Map<String, dynamic> data) async {
+    final response = await _client.from('items').insert(data).select().single();
+
+    // As in your system, inventory row will be auto-created and quantity will be 0
+    final itemMap = Map<String, dynamic>.from(response);
+    itemMap['quantity'] = 0;
+    return Item.fromJson(itemMap);
+  }
+
+  Future<Item> updateItem(String id, Map<String, dynamic> data) async {
+    final response = await _client
         .from('items')
-        .insert({
-          'name': name,
-          'sku': sku,
-          'description': description,
-          'image_url': imageUrl,
-        })
+        .update(data)
+        .eq('id', id)
         .select()
         .single();
 
-    // Init inventory immediately to 0 for this new item to prevent missing joined data later
-    await _supabase.from('inventory').insert({
-      'item_id': response['id'],
-      'quantity': 0,
-    });
+    // Just returning raw item, without full quantity resolution,
+    // usually we reload list
+    return Item.fromJson(response);
   }
 
-  // 3. Delete item (Manager only)
-  Future<void> deleteItem(String itemId, String? imageUrl) async {
+  Future<void> deleteItem(String id) async {
+    // Check if there is an image
+    final item = await _client
+        .from('items')
+        .select('image_url')
+        .eq('id', id)
+        .single();
+
+    final imageUrl = item['image_url']?.toString();
     if (imageUrl != null && imageUrl.isNotEmpty) {
       try {
-        final path = imageUrl.split('gambar-barang/').last;
-        await _supabase.storage.from('gambar-barang').remove([path]);
-      } catch (e) {
-        // Handle error gently
-      }
+        const publicMarker = '/object/public/gambar-barang/';
+        final path = imageUrl.contains(publicMarker)
+            ? imageUrl.split(publicMarker).last
+            : imageUrl.split('/').last;
+        await _client.storage.from('gambar-barang').remove([path]);
+      } catch (_) {}
     }
-    // Note: ensure constraints like ON DELETE CASCADE exist on db,
-    // otherwise manual delete on inventory & stock_movements is needed first.
-    await _supabase.from('items').delete().eq('id', itemId);
+
+    await _client.from('items').delete().eq('id', id);
   }
 
-  // 4. Create Stock Movement (In/Out)
-  Future<void> moveStock({
-    required String itemId,
-    required String type, // 'in' or 'out'
-    required int quantity,
-    String? note,
-    required String userId,
-  }) async {
-    await _supabase.from('stock_movements').insert({
-      'item_id': itemId,
-      'type': type,
-      'quantity': quantity,
-      'note': note,
-      'created_by': userId,
-    });
+  Future<String?> uploadImage(
+    String id,
+    String filePath,
+    Uint8List fileBytes,
+    String fileExt,
+  ) async {
+    final path = 'items/$id/main.$fileExt';
+    await _client.storage
+        .from('gambar-barang')
+        .uploadBinary(path, fileBytes, fileOptions: FileOptions(upsert: true));
+    return _client.storage.from('gambar-barang').getPublicUrl(path);
   }
 
-  // 5. Get recent movements
-  Future<List<StockMovement>> getRecentMovements() async {
-    final response = await _supabase
-        .from('stock_movements')
-        .select()
-        .order('created_at', ascending: false)
-        .limit(20);
-    return (response as List)
-        .map((json) => StockMovement.fromJson(json))
-        .toList();
+  Future<Map<String, int>> _loadInventoryQuantities(
+    List<String> itemIds,
+  ) async {
+    if (itemIds.isEmpty) {
+      return {};
+    }
+
+    try {
+      final inventoryResponse = await _client
+          .from('inventory')
+          .select('item_id, quantity')
+          .inFilter('item_id', itemIds);
+
+      final quantityMap = <String, int>{};
+      for (final row in (inventoryResponse as List<dynamic>)) {
+        final data = Map<String, dynamic>.from(row as Map);
+        final itemId = data['item_id'];
+        if (itemId is String) {
+          quantityMap[itemId] = (data['quantity'] as num?)?.toInt() ?? 0;
+        }
+      }
+      return quantityMap;
+    } catch (_) {
+      // If inventory cannot be read, still show items with fallback qty 0.
+      return {};
+    }
   }
 }

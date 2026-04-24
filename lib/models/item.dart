@@ -1,38 +1,42 @@
-class AppItem {
+class Item {
   final String id;
   final String name;
   final String? sku;
   final String? description;
   final String? imageUrl;
-  final int stock; // Joined from inventory table
+  final DateTime createdAt;
+  final int quantity;
 
-  AppItem({
+  Item({
     required this.id,
     required this.name,
     this.sku,
     this.description,
     this.imageUrl,
-    this.stock = 0,
+    required this.createdAt,
+    this.quantity = 0,
   });
 
-  factory AppItem.fromJson(Map<String, dynamic> json) {
-    // Inventory is often returned as a list or map depending on the join
-    int currentStock = 0;
-    if (json['inventory'] != null) {
-      if (json['inventory'] is List && json['inventory'].isNotEmpty) {
-        currentStock = json['inventory'][0]['quantity'] ?? 0;
-      } else if (json['inventory'] is Map) {
-        currentStock = json['inventory']['quantity'] ?? 0;
-      }
-    }
-
-    return AppItem(
-      id: json['id'],
-      name: json['name'],
-      sku: json['sku'],
-      description: json['description'],
-      imageUrl: json['image_url'],
-      stock: currentStock,
+  factory Item.fromJson(Map<String, dynamic> json) {
+    return Item(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      sku: json['sku'] as String?,
+      description: json['description'] as String?,
+      imageUrl: json['image_url'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'sku': sku,
+      'description': description,
+      'image_url': imageUrl,
+      'created_at': createdAt.toIso8601String(),
+    };
   }
 }
