@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 
 import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/main_scaffold.dart';
 
@@ -26,12 +27,13 @@ final _router = GoRouter(
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
     final isLoggingIn = state.uri.toString() == '/login';
+    final isRegistering = state.uri.toString() == '/register';
 
-    if (session == null && !isLoggingIn) {
+    if (session == null && !isLoggingIn && !isRegistering) {
       return '/login';
     }
 
-    if (session != null && isLoggingIn) {
+    if (session != null && (isLoggingIn || isRegistering)) {
       return '/dashboard';
     }
 
@@ -39,6 +41,10 @@ final _router = GoRouter(
   },
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) {
         return MainScaffold(child: child);
@@ -88,6 +94,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'Inventory Gudang',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),

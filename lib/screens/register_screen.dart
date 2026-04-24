@@ -3,47 +3,59 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends ConsumerStatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _login() async {
-    if (_emailController.text.trim().isEmpty ||
+  Future<void> _register() async {
+    if (_nameController.text.trim().isEmpty ||
+        _emailController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email dan Password tidak boleh kosong')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Semua field wajib diisi')));
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      await ref
-          .read(authRepositoryProvider)
-          .signIn(
-            _emailController.text.trim(),
-            _passwordController.text.trim(),
-          );
+      final authRepo = ref.read(authRepositoryProvider);
+
+      await authRepo.signUp(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        _nameController.text.trim(),
+      );
+
+      // Jika Supabase otomatis login setelah pendaftaran (tergantung verify email dinyalakan/dimatikan),
+      // Kita panggil signOut agar tidak tertembus ke dalam dashboard.
+      await authRepo.signOut();
+
       if (mounted) {
-        context.go('/dashboard');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pendaftaran berhasil! Silahkan masuk.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // Memaksa pengguna kembali ke halaman Login dan tidak masuk ke dashboard
+        context.go('/login');
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().contains('Invalid login credentials')
-                  ? 'Email atau Password salah'
-                  : 'Terjadi kesalahan saat login: ',
-            ),
+            content: Text('Terjadi kesalahan pendaftaran: '),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -57,6 +69,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50], // Flat light aesthetic
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () =>
+              context.pop(), // Kembali ke halaman belakang (login screen)
+        ),
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -77,10 +98,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.inventory_2, size: 64, color: Colors.blue),
+                    const Icon(
+                      Icons.person_add_alt_1,
+                      size: 64,
+                      color: Colors.green,
+                    ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Inventory System',
+                      'Buat Akun Baru',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -89,10 +114,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Masuk untuk melanjutkan',
+                      'Daftar untuk mengakses sistem',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 40),
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Lengkap',
+                        prefixIcon: Icon(Icons.person_outline),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.name,
+                    ),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: _emailController,
                       decoration: const InputDecoration(
@@ -116,13 +151,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
+                        onPressed: _isLoading ? null : _register,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          backgroundColor: Colors.blue,
+                          backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
                           elevation: 0,
                         ),
@@ -136,27 +171,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               )
                             : const Text(
-                                'LOGIN',
+                                'DAFTAR',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1,
                                 ),
                               ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Belum punya akun?',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                        TextButton(
-                          onPressed: () => context.push('/register'),
-                          child: const Text('Daftar di sini'),
-                        ),
-                      ],
                     ),
                   ],
                 ),
