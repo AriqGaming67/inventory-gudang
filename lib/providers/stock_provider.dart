@@ -45,6 +45,17 @@ class StockService {
       ref.read(stockLoadingProvider.notifier).setLoading(false);
     }
   }
+
+  Future<void> deleteStockMovement(String id) async {
+    ref.read(stockLoadingProvider.notifier).setLoading(true);
+    try {
+      final repository = ref.read(stockRepositoryProvider);
+      await repository.deleteStockMovement(id);
+      ref.invalidate(stockMovementsProvider);
+    } finally {
+      ref.read(stockLoadingProvider.notifier).setLoading(false);
+    }
+  }
 }
 
 final stockServiceProvider = Provider<StockService>((ref) {

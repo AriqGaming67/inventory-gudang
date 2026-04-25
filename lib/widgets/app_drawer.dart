@@ -125,13 +125,15 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
       child: Column(
         children: [
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFFF8FAFC)),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+            ),
             accountName: Row(
               children: [
                 Text(
                   _userName,
-                  style: const TextStyle(
-                    color: Color(0xFF1E293B),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -158,7 +160,9 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
             ),
             accountEmail: Text(
               _userEmail,
-              style: const TextStyle(color: Color(0xFF64748B)),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             currentAccountPicture: CircleAvatar(
               backgroundColor: const Color(0xFF2563EB),

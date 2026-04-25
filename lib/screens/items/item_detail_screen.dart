@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/item_provider.dart';
 import '../../providers/stock_provider.dart';
 import '../../widgets/stock_badge.dart';
+import '../../widgets/animated_button.dart';
 import '../stock/stock_movement_screen.dart';
+import 'add_edit_item_screen.dart';
 
 class ItemDetailScreen extends ConsumerWidget {
   final String itemId;
@@ -21,7 +23,10 @@ class ItemDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Detail Barang',
-          style: TextStyle(color: colorScheme.onSurface),
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         backgroundColor: colorScheme.surface,
         elevation: 0,
@@ -29,195 +34,352 @@ class ItemDetailScreen extends ConsumerWidget {
       ),
       body: itemAsync.when(
         data: (item) {
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  height: 250,
-                  width: double.infinity,
-                  color: colorScheme.surfaceContainer,
-                  child: item.imageUrl != null
-                      ? Image.network(
-                          item.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.inventory_2,
-                                size: 100,
-                                color: Colors.grey,
-                              ),
-                        )
-                      : const Icon(
-                          Icons.inventory_2,
-                          size: 100,
-                          color: Colors.grey,
-                        ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.name,
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          StockBadge(quantity: item.quantity),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'SKU: ${item.sku ?? '-'}',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Deskripsi:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.description ?? 'Tidak ada deskripsi.',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => StockMovementScreen(
-                                      initialItem: item,
-                                      type: 'in',
+          return Container(
+            color: colorScheme.surface,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Image Container
+                  Container(
+                    height: 360,
+                    width: double.infinity,
+                    color: colorScheme.surfaceContainer,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        item.imageUrl != null
+                            ? Image.network(
+                                item.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Center(
+                                      child: Icon(
+                                        Icons.inventory_2,
+                                        size: 100,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.add, color: Colors.white),
-                              label: const Text(
-                                'Stock In',
-                                style: TextStyle(color: Colors.white),
+                              )
+                            : Center(
+                                child: Icon(
+                                  Icons.inventory_2,
+                                  size: 100,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF16A34A),
-                              ),
+                        // Edit button overlay
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => StockMovementScreen(
-                                      initialItem: item,
-                                      type: 'out',
-                                    ),
-                                  ),
-                                );
-                              },
+                            child: IconButton(
                               icon: const Icon(
-                                Icons.remove,
+                                Icons.edit,
                                 color: Colors.white,
+                                size: 20,
                               ),
-                              label: const Text(
-                                'Stock Out',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFDC2626),
-                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        AddEditItemScreen(item: item),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Riwayat Transaksi Terakhir',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      stockHistoryAsync.when(
-                        data: (history) {
-                          if (history.isEmpty) {
-                            return Text(
-                              'Belum ada riwayat transaksi.',
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w700,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.qr_code_2,
+                                        size: 14,
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'SKU: ${item.sku ?? '-'}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            );
-                          }
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: history.length,
-                            itemBuilder: (context, index) {
-                              final mov = history[index];
-                              final isIn = mov.type == 'in';
-                              return ListTile(
-                                leading: Icon(
-                                  isIn
-                                      ? Icons.arrow_downward
-                                      : Icons.arrow_upward,
-                                  color: isIn ? Colors.green : Colors.red,
+                            ),
+                            const SizedBox(width: 16),
+                            StockBadge(quantity: item.quantity),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        // Description Section
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: colorScheme.outlineVariant,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Deskripsi',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: colorScheme.onSurface,
                                 ),
-                                title: Text(
-                                  isIn
-                                      ? 'Masuk: ${mov.quantity}'
-                                      : 'Keluar: ${mov.quantity}',
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                item.description ?? 'Tidak ada deskripsi.',
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  height: 1.5,
                                 ),
-                                subtitle: Text(
-                                  'Oleh: ${mov.createdByName ?? '-'} | ${mov.note ?? ''}\n${mov.createdAt.toLocal().toString().split('.')[0]}',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Action Buttons
+                        Text(
+                          'Kelola Stok',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AnimatedElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => StockMovementScreen(
+                                        initialItem: item,
+                                        type: 'in',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                label: 'Stock In',
+                                icon: Icons.add_circle_outline,
+                                backgroundColor: const Color(0xFF16A34A),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: AnimatedElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => StockMovementScreen(
+                                        initialItem: item,
+                                        type: 'out',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                label: 'Stock Out',
+                                icon: Icons.remove_circle_outline,
+                                backgroundColor: const Color(0xFFDC2626),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        // Transaction History
+                        Text(
+                          'Riwayat Transaksi Terakhir',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        stockHistoryAsync.when(
+                          data: (history) {
+                            if (history.isEmpty) {
+                              return Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: colorScheme.outlineVariant,
+                                  ),
+                                ),
+                                child: Text(
+                                  'Belum ada riwayat transaksi.',
                                   style: TextStyle(
-                                    fontSize: 12,
                                     color: colorScheme.onSurfaceVariant,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
-                                isThreeLine: true,
                               );
-                            },
-                          );
-                        },
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (error, stack) => Text(
-                          'Error: $error',
-                          style: const TextStyle(color: Colors.red),
+                            }
+                            return ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: history.length,
+                              itemBuilder: (context, index) {
+                                final mov = history[index];
+                                final isIn = mov.type == 'in';
+                                return Card(
+                                  elevation: 0,
+                                  color: colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.18),
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: BorderSide(
+                                      color: colorScheme.outlineVariant,
+                                    ),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    leading: CircleAvatar(
+                                      backgroundColor: isIn
+                                          ? const Color(
+                                              0xFF16A34A,
+                                            ).withValues(alpha: 0.1)
+                                          : const Color(
+                                              0xFFDC2626,
+                                            ).withValues(alpha: 0.1),
+                                      child: Icon(
+                                        isIn
+                                            ? Icons.arrow_downward
+                                            : Icons.arrow_upward,
+                                        color: isIn
+                                            ? const Color(0xFF16A34A)
+                                            : const Color(0xFFDC2626),
+                                        size: 18,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      isIn
+                                          ? '+${mov.quantity} unit (Masuk)'
+                                          : '-${mov.quantity} unit (Keluar)',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.onSurface,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        if (mov.note != null &&
+                                            mov.note!.isNotEmpty)
+                                          Text(
+                                            mov.note!,
+                                            style: TextStyle(
+                                              color:
+                                                  colorScheme.onSurfaceVariant,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Oleh: ${mov.createdByName ?? '-'} • ${mov.createdAt.toLocal().toString().split('.')[0]}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    isThreeLine:
+                                        mov.note != null &&
+                                        mov.note!.isNotEmpty,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, stack) => Text(
+                            'Error: $error',
+                            style: TextStyle(color: colorScheme.error),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            'Error: $error',
-            style: const TextStyle(color: Colors.red),
+        loading: () => Center(
+          child: Container(
+            color: colorScheme.surface,
+            child: const CircularProgressIndicator(),
+          ),
+        ),
+        error: (error, stack) => Container(
+          color: colorScheme.surface,
+          child: Center(
+            child: Text(
+              'Error: $error',
+              style: TextStyle(color: colorScheme.error),
+            ),
           ),
         ),
       ),

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/item_provider.dart';
 import '../../widgets/item_card.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/animated_button.dart';
 import 'item_detail_screen.dart';
+import 'add_edit_item_screen.dart';
 
 class ItemListScreen extends ConsumerWidget {
   const ItemListScreen({super.key});
@@ -19,7 +21,11 @@ class ItemListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Daftar Barang',
-          style: TextStyle(color: colorScheme.onSurface),
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+            fontSize: 22,
+          ),
         ),
         backgroundColor: colorScheme.surface,
         elevation: 0,
@@ -38,37 +44,119 @@ class ItemListScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.inventory_2,
-                    size: 64,
-                    color: colorScheme.onSurfaceVariant,
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.inventory_2,
+                      size: 48,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
-                    'Belum ada barang, silakan tambahkan.',
+                    'Belum ada barang',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Silakan tambahkan barang baru dari tombol di bawah',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 32),
+                  AnimatedElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddEditItemScreen(),
+                        ),
+                      );
+                    },
+                    label: 'Tambah Barang',
+                    icon: Icons.add,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
                   ),
                 ],
               ),
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return ItemCard(
-                item: item,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ItemDetailScreen(itemId: item.id),
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withValues(
+                        alpha: 0.1,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: colorScheme.primaryContainer.withValues(
+                          alpha: 0.2,
+                        ),
+                      ),
                     ),
-                  );
-                },
-              );
-            },
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: colorScheme.primary,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Total ${items.length} barang tersimpan',
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final item = items[index];
+                    return ItemCard(
+                      item: item,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ItemDetailScreen(itemId: item.id),
+                          ),
+                        );
+                      },
+                    );
+                  }, childCount: items.length),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -76,19 +164,32 @@ class ItemListScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              Icon(Icons.error_outline, size: 64, color: colorScheme.error),
               const SizedBox(height: 16),
-              Text(error.toString(), style: const TextStyle(color: Colors.red)),
-              ElevatedButton(
+              Text(
+                'Terjadi kesalahan',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error.toString(),
+                style: TextStyle(color: colorScheme.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              AnimatedElevatedButton(
                 onPressed: () => ref.invalidate(itemsProvider),
-                child: const Text('Coba Lagi'),
+                label: 'Coba Lagi',
+                icon: Icons.refresh,
               ),
             ],
           ),
         ),
       ),
-      // float dihilangkan karena dipindahkan ke MainScaffold
-      // floatingActionButton: FloatingActionButton( ... ),
     );
   }
 }

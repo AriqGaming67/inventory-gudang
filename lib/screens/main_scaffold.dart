@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../widgets/animated_button.dart';
 import 'items/add_edit_item_screen.dart';
 
 class MainScaffold extends StatelessWidget {
@@ -12,11 +13,13 @@ class MainScaffold extends StatelessWidget {
     // Current route to determine bottom nav index
     final String location = GoRouterState.of(context).uri.toString();
     int currentIndex = _calculateSelectedIndex(location);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: child,
       floatingActionButton: location.startsWith('/items')
-          ? FloatingActionButton(
+          ? AnimatedFAB(
               onPressed: () {
                 Navigator.push(
                   context,
@@ -25,8 +28,9 @@ class MainScaffold extends StatelessWidget {
                   ),
                 );
               },
+              icon: Icons.add,
               backgroundColor: const Color(0xFF2563EB),
-              child: const Icon(Icons.add, color: Colors.white),
+              tooltip: 'Tambah Barang',
             )
           : null,
       bottomNavigationBar: BottomNavigationBar(

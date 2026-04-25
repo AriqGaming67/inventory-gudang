@@ -40,6 +40,10 @@ class StockRepository {
     await _client.from('stock_movements').insert(data);
   }
 
+  Future<void> deleteStockMovement(String id) async {
+    await _client.from('stock_movements').delete().eq('id', id);
+  }
+
   Future<Map<String, String>> _loadItemNames(
     List<Map<String, dynamic>> rows,
   ) async {

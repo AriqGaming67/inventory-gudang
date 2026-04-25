@@ -30,9 +30,12 @@ class DashboardScreen extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       drawer: const AppDrawer(),
       appBar: AppBar(
         title: const Text('Dashboard'),
+        backgroundColor: colorScheme.surface,
+        elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
@@ -40,114 +43,126 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: statsAsyncValue.when(
-        data: (stats) {
-          final totalItems = stats['totalItems'] as int? ?? 0;
-          final totalStock = stats['totalStock'] as int? ?? 0;
-          final lowStockCount = stats['lowStockCount'] as int? ?? 0;
-          final healthyItems = totalItems - lowStockCount;
-          final screenWidth = MediaQuery.of(context).size.width;
-          final isSmallScreen = screenWidth < 480;
+      body: Container(
+        color: colorScheme.surface,
+        child: statsAsyncValue.when(
+          data: (stats) {
+            final totalItems = stats['totalItems'] as int? ?? 0;
+            final totalStock = stats['totalStock'] as int? ?? 0;
+            final lowStockCount = stats['lowStockCount'] as int? ?? 0;
+            final healthyItems = totalItems - lowStockCount;
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isSmallScreen = screenWidth < 480;
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SingleChildScrollView(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Ringkasan Gudang',
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 760),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ringkasan Gudang',
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Pantau kondisi stok secara cepat',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: 16),
-                      GridView(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          mainAxisExtent: isSmallScreen ? 136 : 160,
+                        const SizedBox(height: 4),
+                        Text(
+                          'Pantau kondisi stok secara cepat',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
-                        children: [
-                          _buildStatCard(
-                            context: context,
-                            title: 'Total Barang',
-                            value: '$totalItems',
-                            subtitle: 'Terdaftar',
-                            icon: Icons.inventory_2,
-                            color: const Color(0xFF2563EB),
+                        const SizedBox(height: 16),
+                        GridView(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                mainAxisExtent: isSmallScreen ? 136 : 160,
+                              ),
+                          children: [
+                            _buildStatCard(
+                              context: context,
+                              title: 'Total Barang',
+                              value: '$totalItems',
+                              subtitle: 'Terdaftar',
+                              icon: Icons.inventory_2,
+                              color: const Color(0xFF2563EB),
+                            ),
+                            _buildStatCard(
+                              context: context,
+                              title: 'Total Stok',
+                              value: '$totalStock',
+                              subtitle: 'Unit tersedia',
+                              icon: Icons.stacked_bar_chart,
+                              color: const Color(0xFF16A34A),
+                            ),
+                            _buildStatCard(
+                              context: context,
+                              title: 'Stok Rendah',
+                              value: '$lowStockCount',
+                              subtitle: 'Butuh restock',
+                              icon: Icons.warning_amber,
+                              color: const Color(0xFFD97706),
+                            ),
+                            _buildStatCard(
+                              context: context,
+                              title: 'Stok Aman',
+                              value: '${healthyItems < 0 ? 0 : healthyItems}',
+                              subtitle: 'Kondisi normal',
+                              icon: Icons.verified,
+                              color: const Color(0xFF0EA5E9),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF2563EB,
+                            ).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(
+                                0xFF2563EB,
+                              ).withValues(alpha: 0.2),
+                            ),
                           ),
-                          _buildStatCard(
-                            context: context,
-                            title: 'Total Stok',
-                            value: '$totalStock',
-                            subtitle: 'Unit tersedia',
-                            icon: Icons.stacked_bar_chart,
-                            color: const Color(0xFF16A34A),
-                          ),
-                          _buildStatCard(
-                            context: context,
-                            title: 'Stok Rendah',
-                            value: '$lowStockCount',
-                            subtitle: 'Butuh restock',
-                            icon: Icons.warning_amber,
-                            color: const Color(0xFFD97706),
-                          ),
-                          _buildStatCard(
-                            context: context,
-                            title: 'Stok Aman',
-                            value: '${healthyItems < 0 ? 0 : healthyItems}',
-                            subtitle: 'Kondisi normal',
-                            icon: Icons.verified,
-                            color: const Color(0xFF0EA5E9),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFF2563EB).withValues(
-                              alpha: 0.2,
+                          child: Text(
+                            lowStockCount > 0
+                                ? 'Perhatian: ada $lowStockCount barang dengan stok rendah.'
+                                : 'Semua stok dalam kondisi aman saat ini.',
+                            style: TextStyle(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
-                        child: Text(
-                          lowStockCount > 0
-                              ? 'Perhatian: ada $lowStockCount barang dengan stok rendah.'
-                              : 'Semua stok dalam kondisi aman saat ini.',
-                          style: TextStyle(
-                            color: colorScheme.onSurface,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+            );
+          },
+          loading: () => Container(
+            color: colorScheme.surface,
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          error: (err, stack) => Container(
+            color: colorScheme.surface,
+            child: Center(child: Text('Error: $err')),
+          ),
+        ),
       ),
     );
   }

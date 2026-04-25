@@ -332,174 +332,177 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Header Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(
-                  alpha: isDarkMode ? 0.32 : 0.24,
+      body: Container(
+        color: colorScheme.surface,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Header Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: isDarkMode ? 0.32 : 0.24,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: colorScheme.outlineVariant),
-              ),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: const Color(0xFF2563EB),
-                    child: Text(
-                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: const Color(0xFF2563EB),
+                      child: Text(
+                        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _userName,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
+                    const SizedBox(height: 16),
+                    Text(
+                      _userName,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: roleColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _userRole.toUpperCase(),
+                        style: TextStyle(
+                          color: roleColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _userEmail,
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Stats Row
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      title: 'Bergabung Sejak',
+                      value: _joinedDate,
+                      icon: Icons.calendar_today,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _StatCard(
+                      title: 'Total Transaksi',
+                      value: '$_totalTransactions',
+                      icon: Icons.swap_horiz,
                     ),
-                    decoration: BoxDecoration(
-                      color: roleColor.withValues(alpha: 0.1),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Settings
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest.withValues(
+                    alpha: isDarkMode ? 0.28 : 0.18,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colorScheme.outlineVariant),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        Icons.edit,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(
+                        'Edit Nama',
+                        style: TextStyle(color: colorScheme.onSurface),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onTap: _showEditNameSheet,
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: Icon(
+                        Icons.lock,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(
+                        'Ganti Password',
+                        style: TextStyle(color: colorScheme.onSurface),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      onTap: _showChangePasswordSheet,
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      secondary: Icon(
+                        Icons.dark_mode,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      title: Text(
+                        'Dark Mode',
+                        style: TextStyle(color: colorScheme.onSurface),
+                      ),
+                      value: isDarkMode,
+                      onChanged: (val) =>
+                          ref.read(themeModeProvider.notifier).setDarkMode(val),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.surface,
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      _userRole.toUpperCase(),
-                      style: TextStyle(
-                        color: roleColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _userEmail,
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout),
+                  label: const Text(
+                    'Keluar Akun',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Stats Row
-            Row(
-              children: [
-                Expanded(
-                  child: _StatCard(
-                    title: 'Bergabung Sejak',
-                    value: _joinedDate,
-                    icon: Icons.calendar_today,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _StatCard(
-                    title: 'Total Transaksi',
-                    value: '$_totalTransactions',
-                    icon: Icons.swap_horiz,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Settings
-            Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(
-                  alpha: isDarkMode ? 0.28 : 0.18,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: colorScheme.outlineVariant),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(
-                      Icons.edit,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    title: Text(
-                      'Edit Nama',
-                      style: TextStyle(color: colorScheme.onSurface),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    onTap: _showEditNameSheet,
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: Icon(
-                      Icons.lock,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    title: Text(
-                      'Ganti Password',
-                      style: TextStyle(color: colorScheme.onSurface),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    onTap: _showChangePasswordSheet,
-                  ),
-                  const Divider(height: 1),
-                  SwitchListTile(
-                    secondary: Icon(
-                      Icons.dark_mode,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    title: Text(
-                      'Dark Mode',
-                      style: TextStyle(color: colorScheme.onSurface),
-                    ),
-                    value: isDarkMode,
-                    onChanged: (val) =>
-                        ref.read(themeModeProvider.notifier).setDarkMode(val),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.surface,
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: _logout,
-                icon: const Icon(Icons.logout),
-                label: const Text(
-                  'Keluar Akun',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -544,10 +547,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: colorScheme.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           ),
         ],
       ),
