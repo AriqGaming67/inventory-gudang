@@ -66,13 +66,26 @@ class _StockMovementScreenState extends ConsumerState<StockMovementScreen> {
     }
 
     final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Sesi login sudah habis. Silakan login ulang.',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        );
+      }
+      return;
+    }
 
     final data = {
       'item_id': _selectedItem!.id,
       'type': _type,
       'quantity': quantity,
       'note': _noteController.text.isEmpty ? null : _noteController.text,
-      'created_by': user?.id,
+      'created_by': user.id,
     };
 
     try {

@@ -19,15 +19,15 @@ Inventory Gudang is a Flutter-based warehouse inventory system that supports aut
 
 ## Tech Stack
 
-| Layer | Tools |
-| --- | --- |
-| Frontend | Flutter, Material 3 |
-| State Management | Riverpod |
-| Routing | GoRouter |
-| Backend | Supabase Auth, Database, Storage |
-| Media | Image Picker |
-| Local Storage | Shared Preferences |
-| Config | Flutter Dotenv |
+| Layer            | Tools                            |
+| ---------------- | -------------------------------- |
+| Frontend         | Flutter, Material 3              |
+| State Management | Riverpod                         |
+| Routing          | GoRouter                         |
+| Backend          | Supabase Auth, Database, Storage |
+| Media            | Image Picker                     |
+| Local Storage    | Shared Preferences               |
+| Config           | Flutter Dotenv                   |
 
 ## Project Structure
 
@@ -83,6 +83,17 @@ The app is built around these tables:
 - `inventory`
 - `stock_movements`
 - `profiles`
+
+## Supabase RLS (Important)
+
+If you enable Row Level Security (RLS) on the `inventory` table, stock transactions can fail with:
+
+`PostgrestException(code: 42501) new row violates row-level security policy for table "inventory"`
+
+This typically happens because inserting a row into `stock_movements` triggers an `UPSERT` into `inventory`, but `inventory` has no `INSERT/UPDATE` policy for the current role.
+
+- Fix: run the SQL in [supabase/inventory_rls.sql](supabase/inventory_rls.sql) via Supabase **SQL Editor**.
+- Alternative (more secure): keep `inventory` locked down and do inventory updates inside a `SECURITY DEFINER` trigger/function.
 
 ## Important Notes
 
