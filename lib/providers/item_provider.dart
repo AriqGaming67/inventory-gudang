@@ -12,6 +12,81 @@ final itemsProvider = FutureProvider.autoDispose<List<Item>>((ref) async {
   return await repository.getItems();
 });
 
+enum StockFilter { all, outOfStock, lowStock, safeStock }
+
+enum ItemSort { name, stock, newest }
+
+class ItemSearchNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+  void setState(String value) => state = value;
+}
+
+class ItemFilterNotifier extends Notifier<StockFilter> {
+  @override
+  StockFilter build() => StockFilter.all;
+  void setState(StockFilter value) => state = value;
+}
+
+class ItemSortNotifier extends Notifier<ItemSort> {
+  @override
+  ItemSort build() => ItemSort.newest;
+  void setState(ItemSort value) => state = value;
+}
+
+final itemSearchProvider =
+    NotifierProvider<ItemSearchNotifier, String>(ItemSearchNotifier.new);
+final itemFilterProvider =
+    NotifierProvider<ItemFilterNotifier, StockFilter>(ItemFilterNotifier.new);
+final itemSortProvider =
+    NotifierProvider<ItemSortNotifier, ItemSort>(ItemSortNotifier.new);
+
+final filteredItemsProvider = Provider.autoDispose<AsyncValue<List<Item>>>((ref) {
+  final itemsAsync = ref.watch(itemsProvider);
+  final searchQuery = ref.watch(itemSearchProvider).toLowerCase();
+  final filter = ref.watch(itemFilterProvider);
+  final sort = ref.watch(itemSortProvider);
+
+  return itemsAsync.whenData((items) {
+    var filteredList = items.where((item) {
+      // Search filter
+      final matchesSearch =
+          item.name.toLowerCase().contains(searchQuery) ||
+          (item.sku?.toLowerCase().contains(searchQuery) ?? false);
+
+      if (!matchesSearch) return false;
+
+      // Stock filter
+      switch (filter) {
+        case StockFilter.all:
+          return true;
+        case StockFilter.outOfStock:
+          return item.quantity == 0;
+        case StockFilter.lowStock:
+          return item.quantity > 0 && item.quantity <= 10; // Assuming 10 is low
+        case StockFilter.safeStock:
+          return item.quantity > 10;
+      }
+      return true;
+    }).toList();
+
+    // Sorting
+    switch (sort) {
+      case ItemSort.name:
+        filteredList.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case ItemSort.stock:
+        filteredList.sort((a, b) => a.quantity.compareTo(b.quantity));
+        break;
+      case ItemSort.newest:
+        filteredList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+    }
+
+    return filteredList;
+  });
+});
+
 final itemDetailProvider = FutureProvider.autoDispose.family<Item, String>((
   ref,
   id,

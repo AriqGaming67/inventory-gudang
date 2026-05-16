@@ -10,9 +10,152 @@ import 'add_edit_item_screen.dart';
 class ItemListScreen extends ConsumerWidget {
   const ItemListScreen({super.key});
 
+  void _showFilterSheet(BuildContext context, WidgetRef ref) {
+    final currentFilter = ref.watch(itemFilterProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Filter Stok',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                children: StockFilter.values.map((filter) {
+                  final isSelected = currentFilter == filter;
+                  String label = '';
+                  switch (filter) {
+                    case StockFilter.all:
+                      label = 'Semua';
+                      break;
+                    case StockFilter.outOfStock:
+                      label = 'Stok Habis';
+                      break;
+                    case StockFilter.lowStock:
+                      label = 'Stok Rendah';
+                      break;
+                    case StockFilter.safeStock:
+                      label = 'Stok Aman';
+                      break;
+                  }
+                  return FilterChip(
+                    selected: isSelected,
+                    label: Text(label),
+                    onSelected: (selected) {
+                      ref.read(itemFilterProvider.notifier).setState(filter);
+                      Navigator.pop(context);
+                    },
+                    selectedColor: colorScheme.primaryContainer,
+                    checkmarkColor: colorScheme.primary,
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSortSheet(BuildContext context, WidgetRef ref) {
+    final currentSort = ref.watch(itemSortProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Urutkan Berdasarkan',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Nama (A-Z)'),
+                leading: Icon(
+                  Icons.sort_by_alpha,
+                  color: currentSort == ItemSort.name
+                      ? colorScheme.primary
+                      : null,
+                ),
+                trailing: currentSort == ItemSort.name
+                    ? Icon(Icons.check, color: colorScheme.primary)
+                    : null,
+                onTap: () {
+                  ref.read(itemSortProvider.notifier).setState(ItemSort.name);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Stok (Terendah)'),
+                leading: Icon(
+                  Icons.inventory_2_outlined,
+                  color: currentSort == ItemSort.stock
+                      ? colorScheme.primary
+                      : null,
+                ),
+                trailing: currentSort == ItemSort.stock
+                    ? Icon(Icons.check, color: colorScheme.primary)
+                    : null,
+                onTap: () {
+                  ref.read(itemSortProvider.notifier).setState(ItemSort.stock);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Terbaru'),
+                leading: Icon(
+                  Icons.calendar_today_outlined,
+                  color: currentSort == ItemSort.newest
+                      ? colorScheme.primary
+                      : null,
+                ),
+                trailing: currentSort == ItemSort.newest
+                    ? Icon(Icons.check, color: colorScheme.primary)
+                    : null,
+                onTap: () {
+                  ref.read(itemSortProvider.notifier).setState(ItemSort.newest);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemsAsync = ref.watch(itemsProvider);
+    final itemsAsync = ref.watch(filteredItemsProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -39,6 +182,11 @@ class ItemListScreen extends ConsumerWidget {
       ),
       body: itemsAsync.when(
         data: (items) {
+          final searchQuery = ref.watch(itemSearchProvider);
+          final filter = ref.watch(itemFilterProvider);
+          final isFiltered =
+              searchQuery.isNotEmpty || filter != StockFilter.all;
+
           if (items.isEmpty) {
             return Center(
               child: Column(
@@ -54,14 +202,14 @@ class ItemListScreen extends ConsumerWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.inventory_2,
+                      isFiltered ? Icons.search_off : Icons.inventory_2,
                       size: 48,
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Belum ada barang',
+                    isFiltered ? 'Barang tidak ditemukan' : 'Belum ada barang',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -70,33 +218,108 @@ class ItemListScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Silakan tambahkan barang baru dari tombol di bawah',
+                    isFiltered
+                        ? 'Coba ubah kata kunci atau filter pencarian Anda'
+                        : 'Silakan tambahkan barang baru dari tombol di bawah',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 32),
-                  AnimatedElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AddEditItemScreen(),
-                        ),
-                      );
-                    },
-                    label: 'Tambah Barang',
-                    icon: Icons.add,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 12,
+                  if (isFiltered)
+                    OutlinedButton(
+                      onPressed: () {
+                        ref.read(itemSearchProvider.notifier).setState('');
+                        ref
+                            .read(itemFilterProvider.notifier)
+                            .setState(StockFilter.all);
+                      },
+                      child: const Text('Reset Pencarian'),
+                    )
+                  else
+                    AnimatedElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddEditItemScreen(),
+                          ),
+                        );
+                      },
+                      label: 'Tambah Barang',
+                      icon: Icons.add,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
                     ),
-                  ),
                 ],
               ),
             );
           }
           return CustomScrollView(
             slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Column(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surfaceVariant.withValues(
+                            alpha: 0.3,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: TextField(
+                          onChanged: (value) =>
+                              ref.read(itemSearchProvider.notifier).setState(
+                                    value,
+                                  ),
+                          decoration: InputDecoration(
+                            hintText: 'Cari nama atau SKU...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showFilterSheet(context, ref),
+                              icon: const Icon(Icons.filter_list),
+                              label: const Text('Filter'),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _showSortSheet(context, ref),
+                              icon: const Icon(Icons.swap_vert),
+                              label: const Text('Urutkan'),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -123,7 +346,7 @@ class ItemListScreen extends ConsumerWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Total ${items.length} barang tersimpan',
+                            'Menampilkan ${items.length} barang',
                             style: TextStyle(
                               color: colorScheme.primary,
                               fontWeight: FontWeight.w500,
