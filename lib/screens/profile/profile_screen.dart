@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -62,12 +61,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         final date = rawCreatedAt is String
             ? DateTime.tryParse(rawCreatedAt)
             : null;
-        
+
         final months = [
-          'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-          'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+          'Januari',
+          'Februari',
+          'Maret',
+          'April',
+          'Mei',
+          'Juni',
+          'Juli',
+          'Agustus',
+          'September',
+          'Oktober',
+          'November',
+          'Desember',
         ];
-        
+
         final joinedFormatted = date != null
             ? '${date.day} ${months[date.month - 1]} ${date.year}'
             : '-';
@@ -77,7 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             .from('stock_movements')
             .select('id')
             .eq('created_by', user.id);
-        
+
         final transactionCount = (transactionRes as List).length;
 
         if (mounted) {
@@ -119,21 +128,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       final bytes = await image.readAsBytes();
       final fileExt = image.name.split('.').last;
-      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
-      final filePath = 'avatars/$fileName';
+      final fileName =
+          '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = '${user.id}/$fileName';
 
       await Supabase.instance.client.storage
-          .from('profiles')
-          .uploadBinary(filePath, bytes);
+          .from('avatar')
+          .uploadBinary(
+            filePath,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
       final imageUrl = Supabase.instance.client.storage
-          .from('profiles')
+          .from('avatar')
           .getPublicUrl(filePath);
 
-      await ref.read(authRepositoryProvider).updateProfile(
-            userId: user.id,
-            avatarUrl: imageUrl,
-          );
+      await ref
+          .read(authRepositoryProvider)
+          .updateProfile(userId: user.id, avatarUrl: imageUrl);
 
       if (mounted) {
         setState(() {
@@ -147,9 +160,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isUploading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengupload foto: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal mengupload foto: $e')));
       }
     }
   }
@@ -157,8 +170,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _showEditProfileSheet() {
     final nameController = TextEditingController(text: _userName);
     String selectedRole = _userRole;
+    final isManager = _userRole == 'manager';
     final pageContext = context;
-    
+
     showModalBottomSheet(
       context: pageContext,
       isScrollControlled: true,
@@ -196,26 +210,57 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(
-                    value: 'staff',
-                    label: Text('Staff'),
-                    icon: Icon(Icons.badge),
+              if (isManager)
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'staff',
+                      label: Text('Staff'),
+                      icon: Icon(Icons.badge),
+                    ),
+                    ButtonSegment(
+                      value: 'manager',
+                      label: Text('Manager'),
+                      icon: Icon(Icons.admin_panel_settings),
+                    ),
+                  ],
+                  selected: {selectedRole},
+                  onSelectionChanged: (Set<String> newSelection) {
+                    setSheetState(() {
+                      selectedRole = newSelection.first;
+                    });
+                  },
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
                   ),
-                  ButtonSegment(
-                    value: 'manager',
-                    label: Text('Manager'),
-                    icon: Icon(Icons.admin_panel_settings),
+                  alignment: Alignment.centerLeft,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-                selected: {selectedRole},
-                onSelectionChanged: (Set<String> newSelection) {
-                  setSheetState(() {
-                    selectedRole = newSelection.first;
-                  });
-                },
-              ),
+                  child: Text(
+                    _userRole.toUpperCase(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              if (!isManager)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Hanya manager yang bisa mengubah role.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -228,7 +273,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   final navigator = Navigator.of(sheetContext);
                   final messenger = ScaffoldMessenger.of(pageContext);
                   final newName = nameController.text.trim();
-                  
+
                   if (newName.isEmpty) {
                     messenger.showSnackBar(
                       const SnackBar(content: Text('Nama tidak boleh kosong')),
@@ -245,22 +290,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   }
 
                   try {
-                    await ref.read(authRepositoryProvider).updateProfile(
-                      userId: user.id,
-                      name: newName,
-                      role: selectedRole,
-                    );
+                    await ref
+                        .read(authRepositoryProvider)
+                        .updateProfile(
+                          userId: user.id,
+                          name: newName,
+                          role: isManager ? selectedRole : null,
+                        );
 
                     if (!mounted) return;
 
                     setState(() {
                       _userName = newName;
-                      _userRole = selectedRole;
+                      if (isManager) {
+                        _userRole = selectedRole;
+                      }
                     });
-                    
+
                     navigator.pop();
                     messenger.showSnackBar(
-                      const SnackBar(content: Text('Profil berhasil diperbarui')),
+                      const SnackBar(
+                        content: Text('Profil berhasil diperbarui'),
+                      ),
                     );
                   } catch (e) {
                     messenger.showSnackBar(
