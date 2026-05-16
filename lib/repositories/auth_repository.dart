@@ -48,4 +48,21 @@ class AuthRepository {
       return null;
     }
   }
+
+  Future<void> updateProfile({
+    required String userId,
+    String? name,
+    String? role,
+    String? avatarUrl,
+  }) async {
+    final updates = {
+      if (name != null) 'name': name,
+      if (role != null) 'role': role,
+      if (avatarUrl != null) 'avatar_url': avatarUrl,
+    };
+
+    if (updates.isEmpty) return;
+
+    await _supabase.from('profiles').update(updates).eq('id', userId);
+  }
 }
