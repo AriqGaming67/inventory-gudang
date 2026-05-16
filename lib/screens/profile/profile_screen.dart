@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/app_drawer.dart';
+import '../../providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -17,7 +20,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String _userRole = 'Loading...';
   String _userEmail = '';
   String _joinedDate = '';
+  String? _avatarUrl;
   int _totalTransactions = 0;
+  bool _isUploading = false;
 
   String _mapPasswordError(Object error) {
     if (error is AuthException) {
@@ -57,24 +62,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         final date = rawCreatedAt is String
             ? DateTime.tryParse(rawCreatedAt)
             : null;
+        
+        final months = [
+          'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+          'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+        
         final joinedFormatted = date != null
-            ? '${date.day} ${date.month} ${date.year}'
+            ? '${date.day} ${months[date.month - 1]} ${date.year}'
             : '-';
 
-        // Count transactions
-        final res = await Supabase.instance.client
+        // Count transactions made by this user
+        final transactionRes = await Supabase.instance.client
             .from('stock_movements')
-            .select()
-            .eq('created_by', user.id)
-            .count(CountOption.exact);
-        final count = res.count;
+            .select('id')
+            .eq('created_by', user.id);
+        
+        final transactionCount = (transactionRes as List).length;
 
         if (mounted) {
           setState(() {
             _userName = profile['name'] ?? 'User';
             _userRole = profile['role'] ?? 'staff';
+            _avatarUrl = profile['avatar_url'];
             _joinedDate = joinedFormatted;
-            _totalTransactions = count;
+            _totalTransactions = transactionCount;
           });
         }
       } catch (e) {
@@ -89,78 +101,178 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  void _showEditNameSheet() {
-    final controller = TextEditingController(text: _userName);
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 512,
+    );
+
+    if (image == null) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) return;
+
+      final bytes = await image.readAsBytes();
+      final fileExt = image.name.split('.').last;
+      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+      final filePath = 'avatars/$fileName';
+
+      await Supabase.instance.client.storage
+          .from('profiles')
+          .uploadBinary(filePath, bytes);
+
+      final imageUrl = Supabase.instance.client.storage
+          .from('profiles')
+          .getPublicUrl(filePath);
+
+      await ref.read(authRepositoryProvider).updateProfile(
+            userId: user.id,
+            avatarUrl: imageUrl,
+          );
+
+      if (mounted) {
+        setState(() {
+          _avatarUrl = imageUrl;
+          _isUploading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto profil berhasil diperbarui')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengupload foto: $e')),
+        );
+      }
+    }
+  }
+
+  void _showEditProfileSheet() {
+    final nameController = TextEditingController(text: _userName);
+    String selectedRole = _userRole;
     final pageContext = context;
+    
     showModalBottomSheet(
       context: pageContext,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Edit Nama',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Nama Lengkap',
-                border: OutlineInputBorder(),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Edit Profil',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () async {
-                final navigator = Navigator.of(sheetContext);
-                final messenger = ScaffoldMessenger.of(pageContext);
-                final newName = controller.text.trim();
-                if (newName.isEmpty) {
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Nama tidak boleh kosong')),
-                  );
-                  return;
-                }
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Lengkap',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Role',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'staff',
+                    label: Text('Staff'),
+                    icon: Icon(Icons.badge),
+                  ),
+                  ButtonSegment(
+                    value: 'manager',
+                    label: Text('Manager'),
+                    icon: Icon(Icons.admin_panel_settings),
+                  ),
+                ],
+                selected: {selectedRole},
+                onSelectionChanged: (Set<String> newSelection) {
+                  setSheetState(() {
+                    selectedRole = newSelection.first;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  final navigator = Navigator.of(sheetContext);
+                  final messenger = ScaffoldMessenger.of(pageContext);
+                  final newName = nameController.text.trim();
+                  
+                  if (newName.isEmpty) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Nama tidak boleh kosong')),
+                    );
+                    return;
+                  }
 
-                final user = Supabase.instance.client.auth.currentUser;
-                if (user == null) {
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('Sesi login tidak valid')),
-                  );
-                  return;
-                }
+                  final user = Supabase.instance.client.auth.currentUser;
+                  if (user == null) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Sesi login tidak valid')),
+                    );
+                    return;
+                  }
 
-                await Supabase.instance.client
-                    .from('profiles')
-                    .update({'name': newName})
-                    .eq('id', user.id);
+                  try {
+                    await ref.read(authRepositoryProvider).updateProfile(
+                      userId: user.id,
+                      name: newName,
+                      role: selectedRole,
+                    );
 
-                if (!mounted) {
-                  return;
-                }
+                    if (!mounted) return;
 
-                setState(() => _userName = newName);
-                navigator.pop();
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Nama berhasil diperbarui')),
-                );
-              },
-              child: const Text('Simpan'),
-            ),
-            const SizedBox(height: 16),
-          ],
+                    setState(() {
+                      _userName = newName;
+                      _userRole = selectedRole;
+                    });
+                    
+                    navigator.pop();
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Profil berhasil diperbarui')),
+                    );
+                  } catch (e) {
+                    messenger.showSnackBar(
+                      SnackBar(content: Text('Gagal memperbarui profil: $e')),
+                    );
+                  }
+                },
+                child: const Text('Simpan Perubahan'),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -351,17 +463,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: const Color(0xFF2563EB),
-                      child: Text(
-                        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: const Color(0xFF2563EB),
+                          backgroundImage: _avatarUrl != null
+                              ? NetworkImage(_avatarUrl!)
+                              : null,
+                          child: _avatarUrl == null
+                              ? Text(
+                                  _userName.isNotEmpty
+                                      ? _userName[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                )
+                              : null,
                         ),
-                      ),
+                        if (_isUploading)
+                          const Positioned.fill(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _isUploading ? null : _pickAndUploadImage,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF2563EB),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -434,18 +583,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   children: [
                     ListTile(
                       leading: Icon(
-                        Icons.edit,
+                        Icons.person_outline,
                         color: colorScheme.onSurfaceVariant,
                       ),
                       title: Text(
-                        'Edit Nama',
+                        'Edit Profil',
                         style: TextStyle(color: colorScheme.onSurface),
+                      ),
+                      subtitle: Text(
+                        'Nama dan Role',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       trailing: Icon(
                         Icons.chevron_right,
                         color: colorScheme.onSurfaceVariant,
                       ),
-                      onTap: _showEditNameSheet,
+                      onTap: _showEditProfileSheet,
                     ),
                     const Divider(height: 1),
                     ListTile(

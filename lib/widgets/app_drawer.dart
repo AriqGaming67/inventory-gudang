@@ -17,6 +17,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
   String _userName = 'Loading...';
   String _userRole = 'Loading...';
   String _userEmail = '';
+  String? _avatarUrl;
 
   @override
   void initState() {
@@ -61,6 +62,7 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
         setState(() {
           _userName = profile['name'] ?? 'User';
           _userRole = profile['role'] ?? 'staff';
+          _avatarUrl = profile['avatar_url'];
         });
       } catch (e) {
         if (!mounted) {
@@ -166,10 +168,13 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
             ),
             currentAccountPicture: CircleAvatar(
               backgroundColor: const Color(0xFF2563EB),
-              child: Text(
-                _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                style: const TextStyle(color: Colors.white, fontSize: 24),
-              ),
+              backgroundImage: _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+              child: _avatarUrl == null
+                  ? Text(
+                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                      style: const TextStyle(color: Colors.white, fontSize: 24),
+                    )
+                  : null,
             ),
           ),
           Expanded(
