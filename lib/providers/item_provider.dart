@@ -67,7 +67,6 @@ final filteredItemsProvider = Provider.autoDispose<AsyncValue<List<Item>>>((ref)
         case StockFilter.safeStock:
           return item.quantity > 10;
       }
-      return true;
     }).toList();
 
     // Sorting

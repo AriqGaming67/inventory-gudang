@@ -239,7 +239,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

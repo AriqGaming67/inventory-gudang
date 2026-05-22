@@ -265,7 +265,7 @@ class ItemListScreen extends ConsumerWidget {
                     children: [
                       Container(
                         decoration: BoxDecoration(
-                          color: colorScheme.surfaceVariant.withValues(
+                          color: colorScheme.surfaceContainerHighest.withValues(
                             alpha: 0.3,
                           ),
                           borderRadius: BorderRadius.circular(16),

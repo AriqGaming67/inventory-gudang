@@ -55,10 +55,10 @@ class AuthRepository {
     String? role,
     String? avatarUrl,
   }) async {
-    final updates = {
-      if (name != null) 'name': name,
-      if (role != null) 'role': role,
-      if (avatarUrl != null) 'avatar_url': avatarUrl,
+    final updates = <String, String>{
+      'name': ?name,
+      'role': ?role,
+      'avatar_url': ?avatarUrl,
     };
 
     if (updates.isEmpty) return;
